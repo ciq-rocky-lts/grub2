@@ -7,7 +7,7 @@
 Name:                 grub2
 Epoch:                1
 Version:              2.02
-Release:              156%{?dist}.ciq.0.11
+Release:              167%{?dist}.ciq.0.1.1
 Summary:              Bootloader with support for Linux, Multiboot and more
 Group:                System Environment/Base
 License:              GPLv3+
@@ -31,39 +31,37 @@ Source12:             99-grub-mkconfig.install
 #Source17:	redhatsecureboot601.cer
 #Source18:	redhatsecureboot701.cer
 Source19:             sbat.csv.in
+Source1101:           ciq_sbsign.macros
+Source1102:  ciq_sb_grub2.crt
+Source1103:  ciq_sb_ca.der
+Source1104:  ciq_sb_grub2_aarch64.crt
 
-Source1101: ciq_sbsign.macros
-Source1102: ciq_sb_grub2.crt
-Source1103: ciq_sb_ca.der
-BuildRequires:        bash
+%include %{SOURCE1101}
 
 
 
-%include  %{SOURCE1101}
-%include  %{SOURCE1}
+%include %{SOURCE1}
 
 %if 0%{with_efi_arch}
 %define old_sb_ca	%{_datadir}/pki/sb-certs/secureboot-ca-%{_arch}.cer
 %define old_sb_cer	%{_datadir}/pki/sb-certs/secureboot-grub2-%{_arch}.cer
 %define old_sb_key	rockybootsigningcert
-%define  sb_ca  %{SOURCE1103}
-# (disabled) 		%{_datadir}/pki/sb-certs/secureboot-ca-%{_arch}.cer
-%define  sb_cer  %{SOURCE1102}
-# (disabled) 		%{_datadir}/pki/sb-certs/secureboot-grub2-%{_arch}.cer
-%define  sb_key  ciq_sb_grub2
-# (disabled) 		rockybootsigningcert
+%define sb_ca		%{_datadir}/pki/sb-certs/secureboot-ca-%{_arch}.cer
+%define sb_cer		%{_datadir}/pki/sb-certs/secureboot-grub2-%{_arch}.cer
+%define sb_key		rockybootsigningcert
 %endif
 
 %ifarch ppc64le
 %define old_sb_cer	%{_datadir}/pki/sb-certs/secureboot-grub2-%{_arch}.cer
-%define  sb_cer  %{SOURCE1102}
-# (disabled) 		%{_datadir}/pki/sb-certs/secureboot-grub2-%{_arch}.cer
-%define  sb_key  ciq_sb_grub2
-# (disabled) 		rockybootsigningcert
+%define sb_cer		%{_datadir}/pki/sb-certs/secureboot-grub2-%{_arch}.cer
+%define sb_key		rockybootsigningcert
 %endif
 
 # generate with do-rebase
 %include %{SOURCE2}
+
+# Include ciq_sbsign macros again - they also override the secureboot cert and key values
+%include %{SOURCE1101}
 
 BuildRequires:        gcc efi-srpm-macros
 BuildRequires:        flex bison binutils python3-devel
@@ -174,7 +172,7 @@ This subpackage provides tools for support of all platforms.
 %endif
 
 %prep 
-%global upstreamDist .el8_9
+%global upstreamDist .el8_10
  
 #Define RHEL release (stripped out ciq/rocky dist info) and Rocky release (stripped out CIQ info) respectively.  Needed for SBAT entries for RHEL and RESF: 
 %global sbatrhelrelease  %(echo '%{release}' | sed 's,%{dist},%{upstreamDist},' | sed 's,\.rocky\..*$,,' | sed 's,\.ciq\..*$,,') 
@@ -326,7 +324,23 @@ if [ "$1" = 1 ]; then
 fi
 
 if [ "$1" = 2 ]; then
-	/sbin/grub2-switch-to-blscfg --backup-suffix=.rpmsave &>/dev/null || :
+    if [ -f /etc/default/grub ]; then
+	! grep -q '^GRUB_ENABLE_BLSCFG=.*' /etc/default/grub && \
+	    /sbin/grub2-switch-to-blscfg --backup-suffix=.rpmsave &>/dev/null || :
+    fi
+fi
+
+%posttrans common
+set -eu
+
+GRUB_HOME=/boot/%{name}
+
+if test  -f ${GRUB_HOME}/grub.cfg; then
+    # make sure GRUB_HOME/grub.cfg has 600 permissions
+    GRUB_CFG_MODE=$(stat --format="%a" ${GRUB_HOME}/grub.cfg)
+    if ! test "${GRUB_CFG_MODE}" = "600"; then
+        chmod 0600 ${GRUB_HOME}/grub.cfg
+    fi
 fi
 
 %triggerun -- grub2 < 1:1.99-4
@@ -529,17 +543,65 @@ fi
 %endif
 
 %changelog
-* Mon Jun 03 2024 Skip Grube <sgrube@ciq.com> - 2.02-1561
+* Tue Aug 12 2025 Linux Engineering <le-team@ciq.com> - 2.02-167.1
 - Porting Rocky 8 secureboot grub2 to CIQ build and sign
 - Update: fixed ciq-shim requirement for non x86 architectures (SECO-83)
+- Update: added aarch64 certs
 
-* Wed May 22 2024 Release Engineering <releng@rockylinux.org> - 2.02-156.rocky.0.1
+* Tue Jun 03 2025 Release Engineering <releng@rockylinux.org> - 2.02-167.rocky.0.1
 - Removing redhat old cert sources entries (Sherif Nagy)
 - Preserving rhel8 sbat entry based on shim-review feedback ticket no. 194
 - Porting to 8.10
 - Cleaning up grup.macro extra signing certs and updating rocky test CA and CERT
 - Cleaning up grup.macro extra signing certs
 - Use rocky-sb-certs for secure boot signing
+
+* Thu Apr 24 2025 Leo Sandoval <lsandova@redhat.com> - 2.02-167
+- 99-grub-mkconfig.install: fix condition allowing correct checks if GRUB_ENABLE_BLSCFG is not present
+- Resolves: #RHEL-80168
+
+* Wed Apr 23 2025 Leo Sandoval <lsandova@redhat.com> - 2.02-166
+- Don't try to switch to a BLS config if GRUB_ENABLE_BLSCFG is already set
+- Resolves: #RHEL-86913
+
+* Thu Apr 17 2025 Nicolas Frayer <nfrayer@redhat.com> - 2.02-165
+- fs/ext2: Rework of OOB read patch
+- Resolves: #RHEL-86553
+
+* Fri Apr 4 2025 Leo Sandoval <lsandova@redhat.com> - 2.02-164
+- Bump NVR to sign the build
+- Resolves: #RHEL-85627
+
+* Thu Apr 3 2025 Nicolas Frayer <nfrayer@redhat.com> - 2.02-163
+- fs/xfs: Synced xfs to latest
+- Resolves: #RHEL-85627
+
+* Tue Mar 25 2025 Nicolas Frayer <nfrayer@redhat.com> - 2.02-162
+- ieee1275/ofnet: Fix grub_malloc() removed after added safe
+- Remove 'fs/ntfs: Implement attribute verification' patch
+- Related: #RHEL-79837
+
+* Tue Feb 18 2025 Leo Sandoval <lsandova@redhat.com> - 2.02-161
+- Add Several CVE fixes
+- Resolves CVE-2024-45775 CVE-2025-0624
+- Resolves: #RHEL-75735
+- Resolves: #RHEL-79837
+
+* Wed Nov 13 2024 Leo Sandoval <lsandova@redhat.com> - 2.02-160
+- Remove BLS fake config in case of kernel removal
+- Resolves: #RHEL-4316
+
+* Tue Nov 12 2024 Leo Sandoval <lsandova@redhat.com> - 2.02-159
+- Fix default behavior when GRUB_ENABLE_BLSCFG is not present
+- Resolves: #RHEL-4319
+
+* Thu Sep 19 2024 Leo Sandoval <lsandova@redhat.com> - 2.02-158
+- grub-mkconfig.in: turn off executable owner bit
+- Resolves: #RHEL-58835
+
+* Wed Aug 14 2024 Leo Sandoval <lsandova@redhat.com> - 2.02-157
+- 20-grub-install: fix SELinux security type context for BLS
+- Resolves: #RHEL-4395
 
 * Tue Feb 20 2024 Nicolas Frayer <nfrayer@redhat.com> - 2.02-156
 - fs/ntfs: OOB write fix
