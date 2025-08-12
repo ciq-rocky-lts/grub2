@@ -1,0 +1,39 @@
+#!/bin/bash
+
+if ! [[ $KERNEL_INSTALL_MACHINE_ID ]]; then
+    exit 0
+fi
+
+ARCH=$(uname -m)
+# Older ppc64le OPAL firmware (petitboot version < 1.8.0) don't have BLS support
+# so grub2-mkconfig has to be run to generate a config with menuentry commands.
+if [[ $ARCH = "ppc64le" ]] && [ -d /sys/firmware/opal ]; then
+    RUN_MKCONFIG=true
+fi
+
+if [[ $DISABLE_BLS = "true" ]]; then
+    if grep -q '^GRUB_ENABLE_BLSCFG="*true"*\s*$' /etc/default/grub; then
+	sed -i 's/^GRUB_ENABLE_BLSCFG=.*/GRUB_ENABLE_BLSCFG=false/' /etc/default/grub
+    fi
+fi
+
+[ -f /etc/default/grub ] && . /etc/default/grub
+if [ x$GRUB_ENABLE_BLSCFG = xfalse ]; then
+   RUN_MKCONFIG=true
+fi
+
+# A traditional grub configuration file needs to be generated only in the case when
+# the bootloaders are not capable of populating a menu entry from the BLS fragments.
+if [[ $RUN_MKCONFIG != "true" ]]; then
+    exit 0
+fi
+
+COMMAND="$1"
+
+case "$COMMAND" in
+    add|remove)
+        grub2-mkconfig --no-grubenv-update -o /boot/grub2/grub.cfg >& /dev/null
+        ;;
+    *)
+        ;;
+esac
