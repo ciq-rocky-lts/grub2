@@ -7,7 +7,7 @@
 Name:                 grub2
 Epoch:                1
 Version:              2.02
-Release:              167%{?dist}.ciq.0.1.1
+Release:              167%{?dist}.ciq.0.1.2
 Summary:              Bootloader with support for Linux, Multiboot and more
 Group:                System Environment/Base
 License:              GPLv3+
@@ -543,7 +543,7 @@ fi
 %endif
 
 %changelog
-* Tue Aug 12 2025 Linux Engineering <le-team@ciq.com> - 2.02-167.1
+* Tue Aug 19 2025 Linux Engineering <le-team@ciq.com> - 2.02-167.2
 - Porting Rocky 8 secureboot grub2 to CIQ build and sign
 - Update: fixed ciq-shim requirement for non x86 architectures (SECO-83)
 - Update: added aarch64 certs
