@@ -13,52 +13,73 @@
 # and it is *awful* to update this.
 %global gnulibversion 9f48fb992a3d7e96610c4ce8be969cff2d61a01b
 
-Name: grub2
-Epoch: 1
-Version: 2.06
-Release: 104%{?dist}
-Summary: Bootloader with support for Linux, Multiboot and more
-License: GPLv3+
-URL: http://www.gnu.org/software/grub/
-Obsoletes: grub < 1:0.98
-Source0: https://ftp.gnu.org/gnu/grub/grub-%{tarversion}.tar.xz
-Source1: grub.macros
-Source2: gnulib-%{gnulibversion}.tar.gz
-Source3: 99-grub-mkconfig.install
-Source4: http://unifoundry.com/pub/unifont/unifont-13.0.06/font-builds/unifont-13.0.06.pcf.gz
-Source5: theme.tar.bz2
-Source6: gitignore
-Source7: bootstrap
-Source8: bootstrap.conf
-Source9: strtoull_test.c
-Source10: 20-grub.install
-Source11: grub.patches
-Source12: sbat.csv.in
+Name:                 grub2
+Epoch:                5
+Version:              2.06
+Release:              114%{?dist}.ciq.0.2
+Summary:              Bootloader with support for Linux, Multiboot and more
+License:              GPLv3+
+URL:                  http://www.gnu.org/software/grub/
+Obsoletes:            grub < 1:0.98
+Source0:              https://ftp.gnu.org/gnu/grub/grub-%{tarversion}.tar.xz
+Source1:              grub.macros
+Source2:              gnulib-%{gnulibversion}.tar.gz
+Source3:              99-grub-mkconfig.install
+Source4:              http://unifoundry.com/pub/unifont/unifont-13.0.06/font-builds/unifont-13.0.06.pcf.gz
+Source5:              theme.tar.bz2
+Source6:              gitignore
+Source7:              bootstrap
+Source8:              bootstrap.conf
+Source9:              strtoull_test.c
+Source10:             20-grub.install
+Source11:             grub.patches
+Source12:             sbat.csv.in
+Source13:             gen_grub_cfgstub
 
-Source1101: ciq_sbsign.macros
-Source1102: ciq_sb_grub2.crt
-Source1103: ciq_sb_ca.der
-Source1104:  ciq_sb_grub2_aarch64.crt
+Source1101:           ciq_sbsign.macros
+Source1102:           ciq_sb_grub2.crt
+Source1103:           ciq_sb_ca.der
+Source1104:           ciq_sb_grub2_aarch64.crt
+
 
 %include %{SOURCE1101}
-
-
-
 %include %{SOURCE1}
 
 %ifarch x86_64 aarch64 ppc64le
-%define sb_ca		%{_datadir}/pki/sb-certs/secureboot-ca-%{_arch}.cer
-%define sb_cer		%{_datadir}/pki/sb-certs/secureboot-grub2-%{_arch}.cer
+%define sb_ca		%{SOURCE1103}
+# (define)		%{_datadir}/pki/sb-certs/secureboot-ca-%{_arch}.cer
+%ifarch x86_64
+%define sb_cer		%{SOURCE1102}
+%endif
+%ifarch aarch64
+%define sb_cer		%{SOURCE1104}
+%endif
+%ifarch ppc64le		%{_datadir}/pki/sb-certs/secureboot-grub2-%{_arch}.cer
+%endif
 %endif
 
 %if 0%{?centos}
 
 %ifarch x86_64 aarch64 ppc64le
+%ifarch x86_64
+%define sb_key		ciq_sb_grub2
+%endif
+%ifarch aarch64
+%define sb_key		ciq_sb_grub2_aarch64
+%endif
+%ifarch ppc64le
 %define sb_key		rockylinuxsecurebootkey
+%endif
 %endif
 %else
 %ifarch x86_64 aarch64
-%define sb_key		rockylinuxsecurebootkey
+%ifarch x86_64
+%define sb_key		ciq_sb_grub2
+%endif
+%ifarch aarch64
+%define sb_key		ciq_sb_grub2_aarch64
+%endif
+# (define)		redhatsecureboot802
 %endif
 %ifarch ppc64le
 %define sb_key		rockylinuxsecurebootkey
@@ -67,39 +88,36 @@ Source1104:  ciq_sb_grub2_aarch64.crt
 %endif
 
 
-BuildRequires: gcc efi-srpm-macros
-BuildRequires: flex bison binutils python3
-BuildRequires: ncurses-devel xz-devel bzip2-devel
-BuildRequires: freetype-devel libusb-devel
-BuildRequires: fuse-devel
-BuildRequires: rpm-devel rpm-libs
-BuildRequires: autoconf automake device-mapper-devel
-BuildRequires: freetype-devel gettext-devel git
-BuildRequires: texinfo
-BuildRequires: dejavu-sans-fonts
-BuildRequires: help2man
+BuildRequires:        gcc efi-srpm-macros
+BuildRequires:        flex bison binutils python3
+BuildRequires:        ncurses-devel xz-devel bzip2-devel
+BuildRequires:        freetype-devel libusb-devel
+BuildRequires:        fuse-devel
+BuildRequires:        rpm-devel rpm-libs
+BuildRequires:        autoconf automake device-mapper-devel
+BuildRequires:        freetype-devel gettext-devel git
+BuildRequires:        texinfo
+BuildRequires:        dejavu-sans-fonts
+BuildRequires:        help2man
 # For %%_userunitdir macro
-BuildRequires: systemd
+BuildRequires:        systemd
 %ifarch %{efi_arch}
-BuildRequires: pesign >= 0.99-8
+BuildRequires:        pesign >= 0.99-8
 %endif
 %ifarch aarch64 ppc64le x86_64
-BuildRequires: system-sb-certs
+BuildRequires:        system-sb-certs
 %endif
 %if %{?_with_ccache: 1}%{?!_with_ccache: 0}
-BuildRequires: ccache
+BuildRequires:        ccache
 %endif
 
-ExcludeArch: s390 s390x
-# Including CIQ macros again to override secureboot key and cer definitions above
-%include %{SOURCE1101}
-
-Obsoletes: %{name} <= %{evr}
+ExcludeArch:          s390 s390x
+Obsoletes:            %{name} <= %{evr}
 
 %if 0%{with_legacy_arch}
-Requires: %{name}-%{legacy_package_arch} = %{evr}
+Requires:             %{name}-%{legacy_package_arch} = %{evr}
 %else
-Requires: %{name}-%{package_arch} = %{evr}
+Requires:             %{name}-%{package_arch} = %{evr}
 %endif
 
 %global desc \
@@ -116,9 +134,9 @@ hardware devices.\
 %{desc}
 
 %package common
-Summary: grub2 common layout
-BuildArch: noarch
-Conflicts: grubby < 8.40-18
+Summary:              grub2 common layout
+BuildArch:            noarch
+Conflicts:            grubby < 8.40-18
 Requires(post): util-linux
 
 %description common
@@ -126,10 +144,10 @@ This package provides some directories which are required by various grub2
 subpackages.
 
 %package tools
-Summary: Support tools for GRUB.
-Obsoletes: %{name}-tools < %{evr}
-Requires: %{name}-common = %{epoch}:%{version}-%{release}
-Requires: gettext os-prober which file
+Summary:              Support tools for GRUB.
+Obsoletes:            %{name}-tools < %{evr}
+Requires:             %{name}-common = %{epoch}:%{version}-%{release}
+Requires:             gettext os-prober which file
 Requires(pre):	dracut
 Requires(post):	dracut
 
@@ -139,10 +157,10 @@ This subpackage provides tools for support of all platforms.
 
 %ifarch x86_64
 %package tools-efi
-Summary: Support tools for GRUB.
-Requires: gettext os-prober which file
-Requires: %{name}-common = %{epoch}:%{version}-%{release}
-Obsoletes: %{name}-tools < %{evr}
+Summary:              Support tools for GRUB.
+Requires:             gettext os-prober which file
+Requires:             %{name}-common = %{epoch}:%{version}-%{release}
+Obsoletes:            %{name}-tools < %{evr}
 
 %description tools-efi
 %{desc}
@@ -150,21 +168,21 @@ This subpackage provides tools for support of EFI platforms.
 %endif
 
 %package tools-minimal
-Summary: Support tools for GRUB.
-Requires: gettext
-Requires: %{name}-common = %{epoch}:%{version}-%{release}
-Obsoletes: %{name}-tools < %{evr}
+Summary:              Support tools for GRUB.
+Requires:             gettext
+Requires:             %{name}-common = %{epoch}:%{version}-%{release}
+Obsoletes:            %{name}-tools < %{evr}
 
 %description tools-minimal
 %{desc}
 This subpackage provides tools for support of all platforms.
 
 %package tools-extra
-Summary: Support tools for GRUB.
-Requires: gettext os-prober which file
-Requires: %{name}-tools-minimal = %{epoch}:%{version}-%{release}
-Requires: %{name}-common = %{epoch}:%{version}-%{release}
-Obsoletes: %{name}-tools < %{evr}
+Summary:              Support tools for GRUB.
+Requires:             gettext os-prober which file
+Requires:             %{name}-tools-minimal = %{epoch}:%{version}-%{release}
+Requires:             %{name}-common = %{epoch}:%{version}-%{release}
+Obsoletes:            %{name}-tools < %{evr}
 
 %description tools-extra
 %{desc}
@@ -179,25 +197,25 @@ This subpackage provides tools for support of all platforms.
 
 %if 0%{with_emu_arch}
 %package emu
-Summary: GRUB user-space emulation.
-Requires: %{name}-tools-minimal = %{epoch}:%{version}-%{release}
+Summary:              GRUB user-space emulation.
+Requires:             %{name}-tools-minimal = %{epoch}:%{version}-%{release}
 
 %description emu
 %{desc}
 This subpackage provides the GRUB user-space emulation support of all platforms.
 
 %package emu-modules
-Summary: GRUB user-space emulation modules.
-Requires: %{name}-tools-minimal = %{epoch}:%{version}-%{release}
+Summary:              GRUB user-space emulation modules.
+Requires:             %{name}-tools-minimal = %{epoch}:%{version}-%{release}
 
 %description emu-modules
 %{desc}
 This subpackage provides the GRUB user-space emulation modules.
 %endif
 
-%prep 
-%global upstreamDist .el9_6
- 
+%prep
+%global upstreamDist .el9
+
 #Define RHEL release (stripped out ciq/rocky dist info) and Rocky release (stripped out CIQ info) respectively.  Needed for SBAT entries for RHEL and RESF: 
 %global sbatrhelrelease  %(echo '%{release}' | sed 's,%{dist},%{upstreamDist},' | sed 's,\.rocky\..*$,,' | sed 's,\.ciq\..*$,,') 
 %global sbatresfrelease  %(echo '%{release}' | sed 's,%{dist},%{upstreamDist},' | sed 's,\.ciq\.,\.rocky\.,')
@@ -379,22 +397,12 @@ if test -f ${EFI_HOME}/grub.cfg; then
 fi
 
 # create a stub grub2 config in EFI
-BOOT_UUID=$(%{name}-probe --target=fs_uuid ${GRUB_HOME})
-GRUB_DIR=$(%{name}-mkrelpath ${GRUB_HOME})
-
-cat << EOF > ${EFI_HOME}/grub.cfg.stb
-search --no-floppy --root-dev-only --fs-uuid --set=dev ${BOOT_UUID}
-set prefix=(\$dev)${GRUB_DIR}
-export \$prefix
-configfile \$prefix/grub.cfg
-EOF
+gen_grub_cfgstub $GRUB_HOME $EFI_HOME || :
 
 if test -f ${EFI_HOME}/grubenv; then
     cp -a ${EFI_HOME}/grubenv ${EFI_HOME}/grubenv.rpmsave
     mv --force ${EFI_HOME}/grubenv ${GRUB_HOME}/grubenv
 fi
-
-mv ${EFI_HOME}/grub.cfg.stb ${EFI_HOME}/grub.cfg
 
 %files common -f grub.lang
 %dir %{_libdir}/grub/
@@ -565,11 +573,17 @@ mv ${EFI_HOME}/grub.cfg.stb ${EFI_HOME}/grub.cfg
 %endif
 
 %changelog
-* Tue Aug 12 2025 Linux Engineering <le-team@ciq.com> - 2.06-104
-- Porting Rocky 9 secureboot grub2 to CIQ build and sign
-- Updated to add aarch64 secureboot certs as well as x86_64
+* Wed Jun 24 2026 Jason Rodriguez <jrodriguez@ciq.com> - 2.06-114.ciq.0.2
+- Epoch 1 -> 5 so CIQ grub2 outranks Rocky's on a plain dnf upgrade (pairs with shim Epoch 5 + kernel Requires ciq-shim).
+- Enable with_legacy_modules on x86_64 so grub2-pc-modules is built and packaged.
+  Fixes grub2-pc being uninstallable/un-upgradeable (it requires grub2-pc-modules,
+  which was excluded on x86_64), which caused "removing the following protected
+  packages: grub2-pc" on any box with the stock grub2-pc installed.
 
-* Thu May 15 2025 Release Engineering <releng@rockylinux.org> - 2.06-104
+* Thu Feb 12 2026 Linux Engineering <le-team@ciq.com> - 2.06-114
+- Porting Rocky 9 secureboot grub2 to CIQ build and sign
+
+* Wed Nov 12 2025 Release Engineering <releng@rockylinux.org> - 2.06-114.0.1
 - Removing redhat old cert sources entries (Sherif Nagy)
 - Preserving rhel9 sbat entry based on shim-review feedback ticket no. 194
 - Adding prod cert
@@ -577,6 +591,46 @@ mv ${EFI_HOME}/grub.cfg.stb ${EFI_HOME}/grub.cfg
 - Cleaning up grup.macro extra signing certs
 - Adding Rocky testing CA, CERT and sbat files
 - Use DER for ppc64le builds from rocky-sb-certs (Louis Abel)
+
+* Wed Oct 8 2025 Nicolas Frayer <nfrayer@redhat.com> 2.06-114
+- spec: Update signing key to redhatsecureboot802
+- Resolves: #RHEL-116729
+
+* Thu Aug 7 2025 Nicolas Frayer <nfrayer@redhat.com> 2.06-113
+- sbat: add new sbat entry for centos
+- Resolves: #RHEL-108060
+
+* Tue Jul 29 2025 Leo Sandoval <lsandova@redhat.com> 2.06-112
+- Set correctly the memory attributes for the kernel PE sections
+- Resolves: #RHEL-106075
+
+* Tue Jul 29 2025 Nicolas Frayer <nfrayer@redhat.com> 2.06-111
+- spec/posttrans: move grub config stub creation out of spec
+- Resolves: #RHEL-69944
+
+* Fri Jun 6 2025 Nicolas Frayer <nfrayer@redhat.com> - 2.06-110
+- osdep/linux/getroot: Detect DDF container similar to IMSM
+- Resolves: #RHEL-44336
+
+* Mon Jun 2 2025 Leo Sandoval <lsandova@redhat.com> 2.06-109
+- Handle special kernel parameter characters properly
+- Resolves: #RHEL-64297
+
+* Wed May 21 2025 Nicolas Frayer <nfrayer@redhat.com> - 2.06-108
+- ieee1275: Appended signature support
+- Resolves: #RHEL-24742
+
+* Wed May 14 2025 Nicolas Frayer <nfrayer@redhat.com> - 2.06-107
+- Remove BLS fake config in case of kernel removal
+- Resolves: #RHEL-83915
+
+* Wed May 14 2025 Nicolas Frayer <nfrayer@redhat.com> - 2.06-106
+- sbat: bump grub sbat for new shim release
+- Resolves: #RHEL-91278
+
+* Tue Apr 15 2025 Nicolas Frayer <nfrayer@redhat.com> - 2.06-105
+- ppc/mkimage: SBAT support on powerpc
+- Resolves: #RHEL-87421
 
 * Thu Apr 3 2025 Nicolas Frayer <nfrayer@redhat.com> 2.06-104
 - fs/xfs: Sync with latest xfs upstream
