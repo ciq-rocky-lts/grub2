@@ -6,7 +6,7 @@
 Name:           grub2
 Epoch:          1
 Version:        2.02
-Release:        0.88%{?dist}%{?buildid}.1
+Release:        0.88%{?dist}%{?buildid}.2
 Summary:        Bootloader with support for Linux, Multiboot and more
 Group:          System Environment/Base
 License:        GPLv3+
@@ -25,17 +25,12 @@ Source9:	sbat.csv.in
 
 # CIQ secureboot relevant sources and macros:
 #############
-Source1101: ciq_sbsign.macros
 Source1102: ciq_sb_grub2.crt
 Source1103: ciq_sb_ca.der
 
 %define  sb_cer  %{SOURCE1102}
 %define  sb_key  ciq_sb_grub2
 %define  sb_ca  %{SOURCE1103}
-
-# Include CIQ secureboot macro pesign override:
-%include  %{SOURCE1101}
-#############################
 
 
 %include %{SOURCE1}
@@ -507,6 +502,19 @@ fi
 %endif
 
 %changelog
+* Thu Feb 26 2026 CIQ Security <secureboot@ciq.com> - 1:2.02-0.88.el7.2
+- Backport grub2 2024-2025 CVE fixes (20 CVEs total)
+- SBAT grub,4 baseline (Oct 2023): CVE-2023-4692 CVE-2023-4693
+- SBAT grub,5 additions (Feb 2025): 18 new CVEs below
+- Resolves: CVE-2024-45774 CVE-2024-45775 CVE-2024-45776 CVE-2024-45777
+- Resolves: CVE-2024-45778 CVE-2024-45779 CVE-2024-45780 CVE-2024-45781
+- Resolves: CVE-2024-45782 CVE-2024-45783 CVE-2025-0622 CVE-2025-0677
+- Resolves: CVE-2025-0678 CVE-2025-0684 CVE-2025-0685 CVE-2025-0686
+- Resolves: CVE-2025-0689 CVE-2025-0690 CVE-2025-1118 CVE-2025-1125
+- Note: CVE-2025-0624 not applicable to EL7 2.02 (function does not exist)
+- Bump upstream SBAT grub: 4->5 (CVE fix batch; vendor entries unchanged)
+- Removal of the SB Sign macros as these are no longer needed with the new CIQ secureboot signing process
+
 * Wed Nov 13 2024 Skip Grube <sgrube@ciq.com> - 2.02-088.el7.1
 - Corrected secure boot macros, ensuring EL7 build environment compatibility (no code changes)
 
